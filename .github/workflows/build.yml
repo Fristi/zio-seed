@@ -35,7 +35,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Pack docker image
-        run: docker build -t markdj/zio-seed-rest-server .
-
-      - name: Push docker image
-        run: docker push markdj/zio-seed-rest-server
+        run: docker buildx build --platform linux/amd64,linux/arm64 --push -t markdj/zio-seed-rest-server .
