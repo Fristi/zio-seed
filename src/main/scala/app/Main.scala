@@ -1,10 +1,15 @@
 package app
 
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
+import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.server.Router
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.ztapir._
-import zhttp.http._
-import zhttp.service.Server
 import zio._
+import zio.blocking.Blocking
+import zio.clock.Clock
+import zio.interop.catz._
 import zio.logging._
 
 object Main extends App {
@@ -12,14 +17,25 @@ object Main extends App {
   def countCharacters(s: String): ZIO[Logging, Nothing, Int] =
     Logging.info(s"Counting $s") *> ZIO.succeed(s.length)
 
-  val server: Http[Logging, Throwable, Request, Response[Logging, Throwable]] =
-    ZioHttpInterpreter().toHttp(Endpoints.countCharacters.zServerLogic(countCharacters))
+  val countEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.countCharacters.zServerLogic(countCharacters)
+
+  type Env = Logging
+
+  val routes: HttpRoutes[ZIO[Env with Has[Clock.Service] with Has[Blocking.Service], Throwable, *]] =
+    ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env])).toRoutes
 
 
-  def hello: ZIO[Logging, Nothing, Unit] =
-    Logging.info("Hello from slf4j")
-
+  def serve[R <: Clock with Blocking](routes: HttpRoutes[RIO[R, *]]): ZIO[R, Throwable, Unit] =
+    ZIO.runtime[R].flatMap { implicit runtime =>
+      BlazeServerBuilder[RIO[R, *]]
+        .withExecutionContext(runtime.platform.executor.asEC)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/" -> routes).orNotFound)
+        .serve
+        .compile
+        .drain
+    }
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    Server.start(8080, server.silent).provideLayer(Slf4jLogging.env).exitCode
+    serve(routes).exitCode.provideLayer(Slf4jLogging.env ++ ZEnv.live)
 }
