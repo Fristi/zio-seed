@@ -29,8 +29,9 @@ object Main extends App {
     ZIO.runtime[R].flatMap { implicit runtime =>
       BlazeServerBuilder[RIO[R, *]]
         .withExecutionContext(runtime.platform.executor.asEC)
-        .bindHttp(8080, "localhost")
+        .bindHttp(8080, "0.0.0.0")
         .withHttpApp(Router("/" -> routes).orNotFound)
+        .withoutBanner
         .serve
         .compile
         .drain
