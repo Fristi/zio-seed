@@ -30,6 +30,3 @@ jobs:
 
       - name: Pack docker image
         run: docker build -t server .
-
-      - name: Run image
-        run: docker run server

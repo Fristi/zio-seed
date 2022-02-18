@@ -17,7 +17,7 @@ libraryDependencies += "dev.zio" %% "zio" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-streams" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-logging-slf4j" % "0.5.14"
 
-//libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.20.0-M10"
+libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % "0.19.3"
 
 lazy val root = (project in file("."))
   .settings(
