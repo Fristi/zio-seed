@@ -28,13 +28,13 @@ object Main extends App {
 
   type RuntimeEff[A] = RIO[Env with Clock with Blocking, A]
 
-  val routes: HttpRoutes[RuntimeEff] =
+  def routes: HttpRoutes[RuntimeEff] =
     ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes
 
 
-  val endpoints = List(Endpoints.countCharacters, Endpoints.namePerson)
+  def endpoints = List(Endpoints.countCharacters, Endpoints.namePerson)
 
-  val docs = ZHttp4sServerInterpreter()
+  def docs = ZHttp4sServerInterpreter()
     .from(SwaggerInterpreter().fromEndpoints[RuntimeEff](endpoints, "ZIO seed", "1.0")).toRoutes
 
   def serve[R <: Clock with Blocking](routes: HttpRoutes[RIO[R, *]]): ZIO[R, Throwable, Unit] =
