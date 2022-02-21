@@ -21,8 +21,8 @@ object Main extends App {
 
   def namePerson(name: String) = ZIO.succeed(Person(name, 1337))
 
-  val countEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.countCharacters.zServerLogic(countCharacters)
-  val nameEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.namePerson.zServerLogic(namePerson)
+  def countEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.countCharacters.zServerLogic(countCharacters)
+  def nameEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.namePerson.zServerLogic(namePerson)
 
   type Env = Logging
 
@@ -34,7 +34,7 @@ object Main extends App {
 
   def endpoints = List(Endpoints.countCharacters, Endpoints.namePerson)
 
-  def docs = ZHttp4sServerInterpreter()
+  def docs: HttpRoutes[RuntimeEff] = ZHttp4sServerInterpreter()
     .from(SwaggerInterpreter().fromEndpoints[RuntimeEff](endpoints, "ZIO seed", "1.0")).toRoutes
 
   def serve[R <: Clock with Blocking](routes: HttpRoutes[RIO[R, *]]): ZIO[R, Throwable, Unit] =
