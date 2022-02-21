@@ -18,6 +18,8 @@ libraryDependencies += "dev.zio" %% "zio-streams" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-logging-slf4j" % "0.5.14"
 
 libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.19.3"
+libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "0.19.3"
+libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % "0.19.3"
 
 addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
 
