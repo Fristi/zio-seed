@@ -26,14 +26,16 @@ object Main extends App {
 
   type Env = Logging
 
-  val routes: HttpRoutes[ZIO[Env with Has[Clock.Service] with Has[Blocking.Service], Throwable, *]] =
+  type RuntimeEff[A] = RIO[Env with Clock with Blocking, A]
+
+  val routes: HttpRoutes[RuntimeEff] =
     ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes
 
 
-  val swaggerEndpoints = ZHttp4sServerInterpreter().from(
-    SwaggerInterpreter()
-    .fromEndpoints[RIO[Env with Has[Clock.Service] with Has[Blocking.Service], *]](List(countEndpoint.endpoint, nameEndpoint.endpoint), "ZIO seed", "1.0")
-  ).toRoutes
+  val endpoints = List(Endpoints.countCharacters, Endpoints.namePerson)
+
+  val docs = ZHttp4sServerInterpreter()
+    .from(SwaggerInterpreter().fromEndpoints[RuntimeEff](endpoints, "ZIO seed", "1.0")).toRoutes
 
   def serve[R <: Clock with Blocking](routes: HttpRoutes[RIO[R, *]]): ZIO[R, Throwable, Unit] =
     ZIO.runtime[R].flatMap { implicit runtime =>
@@ -48,5 +50,5 @@ object Main extends App {
     }
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    serve(routes <+> swaggerEndpoints).exitCode.provideLayer(Slf4jLogging.env ++ ZEnv.live)
+    serve(routes <+> docs).exitCode.provideLayer(Slf4jLogging.env ++ ZEnv.live)
 }
