@@ -12,8 +12,7 @@ nativeImageOptions ++= List(
 )
 nativeImageVersion := "21.3.0"
 
-libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.36"
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
 libraryDependencies += "dev.zio" %% "zio" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-streams" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-logging-slf4j" % "0.5.14"
