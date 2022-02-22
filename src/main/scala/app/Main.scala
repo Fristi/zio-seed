@@ -11,6 +11,8 @@ import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
+import zio.system._
+import zio.config._
 import zio.logging._
 
 object Main extends App {
@@ -23,7 +25,7 @@ object Main extends App {
   def countEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.countCharacters.zServerLogic(countCharacters)
   def nameEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.namePerson.zServerLogic(namePerson)
 
-  type Env = Logging
+  type Env = Logging with Has[Config]
   type RuntimeEff[A] = RIO[Env with Clock with Blocking, A]
 
   def docs: HttpRoutes[RuntimeEff] =
@@ -49,11 +51,24 @@ object Main extends App {
         .drain
     }
 
+  def layer: ZLayer[Any, Throwable, Env with ZEnv] = {
+
+    val config = System.live >>> ZConfig.fromSystemEnv(Config.descriptor)
+
+    config ++ Slf4jLogging.env ++ ZEnv.live
+  }
+
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
+
+    def boot: ZIO[Logging with Has[Config], Nothing, Unit] =
+      ZIO.service[Config].flatMap(config => Logging.info(s"Started (version: ${config.version})"))
 
     val router =
       ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes <+> docs
 
-    serve(router.orNotFound).exitCode.provideLayer(Slf4jLogging.env ++ ZEnv.live)
+    def prg: Task[Unit] =
+      (boot *> serve(router.orNotFound)).provideLayer(layer)
+
+    prg.exitCode
   }
 }
