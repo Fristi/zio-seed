@@ -8,7 +8,7 @@ nativeImageOptions ++= List(
   "--no-fallback",
   "--allow-incomplete-classpath",
   "--enable-https",
-  "-H:IncludeResources=META-INF/resources/webjars/.*"
+  "-H:IncludeResources=logback.xml|META-INF/resources/webjars/.*"
 )
 nativeImageVersion := "21.3.0"
 
