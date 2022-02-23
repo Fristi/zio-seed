@@ -63,12 +63,6 @@ object Main extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
 
-    val blazeFilter = new Filter {
-      override def matches[M](record: LogRecord[M]): Boolean =
-        record.className.startsWith("org.http4s.blaze") && record.level < Level.Warn
-    }
-
-    def setupScribe = UIO(scribe.Logger.root.clearModifiers().withModifier(FilterBuilder().exclude(blazeFilter)).replace())
 
     def banner: ZIO[Logging with Has[Config], Nothing, Unit] =
       ZIO.service[Config].flatMap(config => Logging.info(s"Started (version: ${config.version})"))
@@ -77,7 +71,7 @@ object Main extends App {
       ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes <+> docs
 
     def prg: Task[Unit] =
-      (setupScribe *> banner *> serve(router.orNotFound)).provideLayer(layer)
+      (banner *> serve(router.orNotFound)).provideLayer(layer)
 
     prg.exitCode
   }
