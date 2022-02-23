@@ -3,6 +3,9 @@ package app
 import cats.implicits._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.{HttpApp, HttpRoutes}
+import scribe.{Level, LogRecord}
+import scribe.filter.{Filter, FilterBuilder}
+import scribe.modify.LogModifier
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
@@ -60,14 +63,21 @@ object Main extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
 
-    def boot: ZIO[Logging with Has[Config], Nothing, Unit] =
+    val blazeFilter = new Filter {
+      override def matches[M](record: LogRecord[M]): Boolean =
+        record.className.startsWith("org.http4s.blaze") && record.level < Level.Warn
+    }
+
+    def setupScribe = UIO(scribe.Logger.root.clearModifiers().withModifier(FilterBuilder().exclude(blazeFilter)).replace())
+
+    def banner: ZIO[Logging with Has[Config], Nothing, Unit] =
       ZIO.service[Config].flatMap(config => Logging.info(s"Started (version: ${config.version})"))
 
     val router =
       ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes <+> docs
 
     def prg: Task[Unit] =
-      (boot *> serve(router.orNotFound)).provideLayer(layer)
+      (setupScribe *> banner *> serve(router.orNotFound)).provideLayer(layer)
 
     prg.exitCode
   }

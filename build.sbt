@@ -12,7 +12,7 @@ nativeImageOptions ++= List(
 )
 nativeImageVersion := "21.3.0"
 
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
+libraryDependencies += "com.outr" %% "scribe-slf4j" % "3.8.0"
 libraryDependencies += "dev.zio" %% "zio" % "1.0.12"
 libraryDependencies += "dev.zio" %% "zio-config" % "1.0.10"
 libraryDependencies += "dev.zio" %% "zio-streams" % "1.0.12"
