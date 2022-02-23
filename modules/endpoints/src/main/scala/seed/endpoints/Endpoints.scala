@@ -1,5 +1,6 @@
-package app
+package seed.endpoints
 
+import seed.core.Person
 import sttp.tapir._
 import sttp.tapir.json.zio._
 import sttp.tapir.generic.auto._

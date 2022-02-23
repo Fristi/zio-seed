@@ -1,4 +1,4 @@
-package app
+package seed.api
 
 import zio.config._, ConfigDescriptor._
 
@@ -8,3 +8,4 @@ object Config {
   val descriptor: ConfigDescriptor[Config] =
     string("VERSION").default("1.0.0").to[Config]
 }
+

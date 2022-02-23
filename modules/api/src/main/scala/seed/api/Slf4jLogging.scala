@@ -1,4 +1,4 @@
-package app
+package seed.api
 
 import scribe._
 import scribe.filter._

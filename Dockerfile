@@ -1,3 +1,3 @@
 FROM ubuntu
-COPY ./target/native-image/zio-seed /opt/server
+COPY ./api/target/native-image/api /opt/server
 ENTRYPOINT ["/opt/server"]

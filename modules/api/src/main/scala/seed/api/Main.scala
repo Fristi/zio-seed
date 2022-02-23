@@ -1,11 +1,10 @@
-package app
+package seed.api
 
 import cats.implicits._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.{HttpApp, HttpRoutes}
-import scribe.{Level, LogRecord}
-import scribe.filter.{Filter, FilterBuilder}
-import scribe.modify.LogModifier
+import seed.core.Person
+import seed.endpoints.Endpoints
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
@@ -13,10 +12,10 @@ import sttp.tapir.ztapir._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.interop.catz._
-import zio.system._
 import zio.config._
+import zio.interop.catz._
 import zio.logging._
+import zio.system._
 
 object Main extends App {
 
