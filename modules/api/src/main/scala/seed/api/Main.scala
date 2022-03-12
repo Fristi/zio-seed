@@ -3,8 +3,9 @@ package seed.api
 import cats.implicits._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.{HttpApp, HttpRoutes}
-import seed.core.Person
-import seed.endpoints.Endpoints
+import seed.endpoints.TodoEndpoints
+import seed.logic.TodoService
+import seed.logic.db.DoobieTodoService
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
@@ -19,23 +20,15 @@ import zio.system._
 
 object Main extends App {
 
-  def countCharacters(s: String): ZIO[Logging, Nothing, Int] =
-    ZIO.succeed(s.length)
-
-  def namePerson(name: String) = ZIO.succeed(Person(name, 1337))
-
-  def countEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.countCharacters.zServerLogic(countCharacters)
-  def nameEndpoint: ZServerEndpoint[Logging, ZioStreams] = Endpoints.namePerson.zServerLogic(namePerson)
-
-  type Env = Logging with Has[Config]
+  type Env = Logging with Has[TodoService]
   type RuntimeEff[A] = RIO[Env with Clock with Blocking, A]
 
   def docs: HttpRoutes[RuntimeEff] =
     ZHttp4sServerInterpreter()
       .from(
         SwaggerInterpreter(basePrefix = List("api")).fromEndpoints[RuntimeEff](
-            List(Endpoints.countCharacters, Endpoints.namePerson),
-            "ZIO seed",
+            List(TodoEndpoints.list, TodoEndpoints.done, TodoEndpoints.insert),
+            "ZIO seed - Todo example",
             "1.0"
           )
       )
@@ -53,24 +46,21 @@ object Main extends App {
         .drain
     }
 
-  def layer: ZLayer[Any, Throwable, Env with ZEnv] = {
+  def layer: ZLayer[Any, Throwable, Env with zio.ZEnv] = {
 
     val config = System.live >>> ZConfig.fromSystemEnv(Config.descriptor)
+    val todoService = config.project(_.db) ++ Clock.live ++ Blocking.live >>> Transactors.layer >>> DoobieTodoService.layer
 
-    config ++ Slf4jLogging.env ++ ZEnv.live
+    todoService ++ Slf4jLogging.env ++ ZEnv.live
   }
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
 
-
-    def banner: ZIO[Logging with Has[Config], Nothing, Unit] =
-      ZIO.service[Config].flatMap(config => Logging.info(s"Started (version: ${config.version})"))
-
     val router =
-      ZHttp4sServerInterpreter().from(List(countEndpoint.widen[Env], nameEndpoint.widen[Env])).toRoutes <+> docs
+      ZHttp4sServerInterpreter().from(TodosHandlers.all).toRoutes <+> docs
 
     def prg: Task[Unit] =
-      (banner *> serve(router.orNotFound)).provideLayer(layer)
+      (serve(router.orNotFound)).provideLayer(layer)
 
     prg.exitCode
   }
