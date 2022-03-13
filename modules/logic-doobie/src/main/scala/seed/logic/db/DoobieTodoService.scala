@@ -19,7 +19,7 @@ final case class DoobieTodoService(tx: Transactor[Task]) extends TodoService {
 
     def done(id: UUID): Update0 = sql"update todos set done = true where id = $id".update
 
-    def list: Query0[Todo] = sql"select id, description done from todos where done = false".query[Todo]
+    def list: Query0[Todo] = sql"select id, description, done from todos where done = false".query[Todo]
   }
 
   def insert(todo: Todo): Task[Int] = Queries.insert(todo).run.transact(tx)

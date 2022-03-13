@@ -1,67 +1,72 @@
 package seed.api
 
-import cats.implicits._
-import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.{HttpApp, HttpRoutes}
 import seed.endpoints.TodoEndpoints
 import seed.logic.TodoService
 import seed.logic.db.DoobieTodoService
-import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
-import sttp.tapir.swagger.bundle.SwaggerInterpreter
+import sttp.tapir.AnyEndpoint
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.redoc.bundle.RedocInterpreter
+import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, SecurityFailureContext, ServerResponseFromOutput}
+import sttp.tapir.server.interceptor.log.ServerLog
+import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.ztapir._
+import zhttp.service.server.ServerChannelFactory
+import zhttp.service.{EventLoopGroup, Server}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.config._
-import zio.interop.catz._
+import zio.magic._
 import zio.logging._
 import zio.system._
 
 object Main extends App {
 
   type Env = Logging with Has[TodoService]
-  type RuntimeEff[A] = RIO[Env with Clock with Blocking, A]
-
-  def docs: HttpRoutes[RuntimeEff] =
-    ZHttp4sServerInterpreter()
-      .from(
-        SwaggerInterpreter(basePrefix = List("api")).fromEndpoints[RuntimeEff](
-            List(TodoEndpoints.list, TodoEndpoints.done, TodoEndpoints.insert),
-            "ZIO seed - Todo example",
-            "1.0"
-          )
-      )
-      .toRoutes
-
-  def serve[R <: Clock with Blocking](routes: HttpApp[RIO[R, *]]): ZIO[R, Throwable, Unit] =
-    ZIO.runtime[R].flatMap { implicit runtime =>
-      BlazeServerBuilder[RIO[R, *]]
-        .withExecutionContext(runtime.platform.executor.asEC)
-        .bindHttp(8080, "0.0.0.0")
-        .withHttpApp(routes)
-        .withoutBanner
-        .serve
-        .compile
-        .drain
-    }
 
   def layer: ZLayer[Any, Throwable, Env with zio.ZEnv] = {
 
     val config = System.live >>> ZConfig.fromSystemEnv(Config.descriptor)
-    val todoService = config.project(_.db) ++ Clock.live ++ Blocking.live >>> Transactors.layer >>> DoobieTodoService.layer
+    val todoService =
+      ZLayer.wire[Has[TodoService]](config.project(_.db), Clock.live, Blocking.live, Transactors.layer, DoobieTodoService.layer)
 
     todoService ++ Slf4jLogging.env ++ ZEnv.live
   }
 
+  type Logged[A] = RIO[Env, A]
+
+  val serverLog: ServerLog[Logged] = new ServerLog[Logged] {
+    def decodeFailureNotHandled(ctx: DecodeFailureContext): Logged[Unit] =
+      ZIO.unit
+    def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponseFromOutput[_]): Logged[Unit] =
+      Logging.warn(s"Decode failed handled: ${ctx}")
+    def securityFailureHandled(ctx: SecurityFailureContext[Logged, _], response: ServerResponseFromOutput[_]): Logged[Unit] =
+      Logging.warn(s"Security failed handled: ${ctx}")
+    def requestHandled(ctx: DecodeSuccessContext[Logged, _, _], response: ServerResponseFromOutput[_]): Logged[Unit] =
+      ZIO.unit
+    def exception(e: AnyEndpoint, request: ServerRequest, ex: Throwable): Logged[Unit] =
+      Logging.throwable(s"Error occurred on ${request.toString()}", ex)
+  }
+
+  val docs = RedocInterpreter()
+    .fromEndpoints[Task](
+      List(TodoEndpoints.list, TodoEndpoints.done, TodoEndpoints.insert),
+      "ZIO seed - Todo example",
+      "1.0"
+    )
+
+
   override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
 
-    val router =
-      ZHttp4sServerInterpreter().from(TodosHandlers.all).toRoutes <+> docs
+    val serverOpts = ZioHttpServerOptions.default[Env].copy(interceptors = ZioHttpServerOptions.customInterceptors.serverLog(serverLog).interceptors)
+    val endpointHandlers = ZioHttpInterpreter(serverOpts).toHttp(TodosHandlers.all)
+    val docHandlers = ZioHttpInterpreter().toHttp(docs)
+    val server = Server.app(docHandlers ++ endpointHandlers) ++ Server.port(8080)
 
-    def prg: Task[Unit] =
-      (serve(router.orNotFound)).provideLayer(layer)
-
-    prg.exitCode
+    server
+      .make
+      .provideLayer(layer ++ EventLoopGroup.auto() ++ ServerChannelFactory.auto)
+      .useForever
+      .exitCode
   }
 }

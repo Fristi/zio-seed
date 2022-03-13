@@ -1,0 +1,11 @@
+version: "3.6"
+services:
+  db:
+    image: mdillon/postgis:11-alpine
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: todos
+      POSTGRES_PASS: todos
+      POSTGRES_USER: todos

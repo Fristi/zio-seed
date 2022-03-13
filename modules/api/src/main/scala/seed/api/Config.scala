@@ -8,7 +8,8 @@ final case class DbConfig(
   port: Int,
   username: String,
   password: String,
-  database: String
+  database: String,
+  poolSize: Int
 )
 
 object DbConfig {
@@ -17,7 +18,8 @@ object DbConfig {
     int("PG_PORT").default(5432) zip
     string("PG_USER").default("todos") zip
     string("PG_PASS").default("todos") zip
-    string("PG_DB").default("todos")
+    string("PG_DB").default("todos") zip
+    int("PG_POOL_SIZE").default(10)
   ).to[DbConfig]
 }
 

@@ -1,10 +1,11 @@
 package seed.api
 
-import seed.api.Layers.Env
+import seed.api.Main.Env
 import seed.core.AppError
 import seed.endpoints.TodoEndpoints
 import seed.logic.TodoService
 import sttp.tapir.ztapir._
+import zio.logging.Logging
 import zio.{IO, RIO, ZIO}
 
 object TodosHandlers {
@@ -27,8 +28,8 @@ object TodosHandlers {
       .zServerLogic(id => handle(TodoService(_.done(id))).unit)
       .widen[Env]
 
-  def handle[R, A](prg: RIO[R, A]): ZIO[R, AppError, A] =
-    prg.either.flatMap {
+  def handle[R <: Logging, A](prg: RIO[R, A]): ZIO[R, AppError, A] =
+    prg.tapError(err => Logging.throwable("Exception occurred", err)).either.flatMap {
       case Left(err) => IO.fail(AppError.Unexpected(err))
       case Right(value) => IO.succeed(value)
     }

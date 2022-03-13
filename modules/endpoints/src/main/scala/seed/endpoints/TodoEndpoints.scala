@@ -15,13 +15,13 @@ object TodoEndpoints {
   )
 
   def list: Endpoint[Unit, Unit, AppError, List[Todo], Any] =
-    endpoint.in("todos").get.errorOut(error).out(jsonBody[List[Todo]])
+    endpoint.get.in("todos").errorOut(error).out(jsonBody[List[Todo]]).name("listTodos")
 
   def insert: Endpoint[Unit, Todo, AppError, Unit, Any] =
-    endpoint.in("todos").post.errorOut(error).in(jsonBody[Todo]).out(emptyOutput)
+    endpoint.post.in("todos").errorOut(error).in(jsonBody[Todo]).out(emptyOutput).name("insertTodo")
 
   def done: Endpoint[Unit, UUID, AppError, Unit, Any] =
-    endpoint.in("todos" / path[UUID]("id")).put.errorOut(error).out(emptyOutput)
+    endpoint.put.in("todos" / path[UUID]("id")).errorOut(error).out(emptyOutput).name("markTodo")
 
   implicit def decoderTodo: JsonDecoder[Todo] = DeriveJsonDecoder.gen[Todo]
 
