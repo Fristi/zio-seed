@@ -1,8 +1,8 @@
 package seed.api
 
+import seed.domain.todoservice.doobie.DoobieTodoService
 import seed.endpoints.TodoEndpoints
 import seed.logic.TodoService
-import seed.logic.db.DoobieTodoService
 import sttp.tapir.redoc.bundle.RedocInterpreter
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import zhttp.service.server.ServerChannelFactory

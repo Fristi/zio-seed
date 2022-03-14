@@ -1,4 +1,4 @@
-package seed.logic.db
+package seed.domain.todoservice.doobie
 
 import doobie._
 import doobie.hikari.HikariTransactor
