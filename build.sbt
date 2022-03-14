@@ -43,7 +43,6 @@ val api = project.in(file("modules/api"))
       "com.outr" %% "scribe-slf4j" % "3.8.0",
       "dev.zio" %% "zio-config" % "2.0.0",
       "dev.zio" %% "zio-logging-slf4j" % "0.5.14",
-      "org.scalameta" %% "svm-subs" % "20.2.0" % "compile-internal",
       "com.softwaremill.sttp.tapir"   %% "tapir-zio1-http-server"        % tapirVersion,
       "com.softwaremill.sttp.tapir" %% "tapir-redoc-bundle" % tapirVersion
     ),
@@ -67,7 +66,7 @@ val api = project.in(file("modules/api"))
       "--allow-incomplete-classpath",
       "-H:IncludeResources=META-INF/maven/org.webjars/.*|META-INF/resources/webjars/.*"
     ),
-    nativeImageVersion := "20.2.0"
+    nativeImageVersion := "22.0.0.2"
   )
 
 lazy val seed = (project in file(".")).aggregate(domain, domainTodoService, endpoints, api)
