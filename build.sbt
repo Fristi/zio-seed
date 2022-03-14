@@ -64,6 +64,7 @@ val api = project.in(file("modules/api"))
       "--initialize-at-run-time=io.netty.channel.unix.Errors",
       "--initialize-at-run-time=io.netty.channel.unix.IovArray",
       "--allow-incomplete-classpath",
+      "--initialize-at-build-time",
       "-H:IncludeResources=META-INF/maven/org.webjars/.*|META-INF/resources/webjars/.*"
     ),
     nativeImageVersion := "22.0.0.2"
